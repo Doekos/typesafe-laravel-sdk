@@ -1,0 +1,66 @@
+name: Upstream sync
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+    inputs:
+      python:
+        description: 'Override the Python SDK version (for testing the issue path)'
+        required: false
+      js:
+        description: 'Override the JavaScript SDK version (for testing the issue path)'
+        required: false
+
+jobs:
+  check:
+    name: Check official SDK releases
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Compare versions
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ARGS=""
+          [ -n "${{ inputs.python }}" ] && ARGS="$ARGS --python=${{ inputs.python }}"
+          [ -n "${{ inputs.js }}" ] && ARGS="$ARGS --js=${{ inputs.js }}"
+          set +e
+          OUTPUT="$(php bin/upstream-check.php $ARGS)"
+          STATUS=$?
+          set -e
+          echo "$OUTPUT"
+          echo "mirrored=$(echo "$OUTPUT" | head -1 | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+          echo "behind=$([ $STATUS -eq 1 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          {
+            echo 'report<<EOF'
+            echo "$OUTPUT"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the port issue
+        if: steps.check.outputs.behind == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MIRRORED: ${{ steps.check.outputs.mirrored }}
+          REPORT: ${{ steps.check.outputs.report }}
+        run: |
+          TITLE="Upstream TypeSafe SDK $MIRRORED released"
+          BODY="$(printf '%s\n\n## Port checklist\n\n- [ ] Re-check the wire contract against the live API\n- [ ] Port new or changed public surface\n- [ ] Update `TypeSafeClient::VERSION` and `CHANGELOG.md` (name the mirrored versions)\n- [ ] Tag the release\n\nOpened automatically by `.github/workflows/upstream-sync.yml`.' "$REPORT")"
+          EXISTING="$(gh issue list --state open --search "$TITLE in:title" --json number,title --jq ".[] | select(.title == \"$TITLE\") | .number" | head -1)"
+          if [ -n "$EXISTING" ]; then
+            gh issue edit "$EXISTING" --body "$BODY"
+            echo "Updated issue #$EXISTING"
+          else
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi
