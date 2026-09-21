@@ -8,6 +8,9 @@ jobs:
   verify:
     name: Verify version
     runs-on: ubuntu-latest
+    # The default workflow token is read-only, which makes creating the release fail.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
