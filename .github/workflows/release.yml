@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  verify:
+    name: Verify version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Check tag matches VERSION and CHANGELOG
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          CONST="$(php -r 'require "src/TypeSafeClient.php"; echo \Doekos\TypeSafe\TypeSafeClient::VERSION;')"
+          CHANGELOG="$(grep -m1 -oE '## [0-9]+\.[0-9]+\.[0-9]+' CHANGELOG.md | awk '{print $2}')"
+          echo "tag=$TAG const=$CONST changelog=$CHANGELOG"
+          if [ "$TAG" != "$CONST" ]; then
+            echo "::error::Tag v$TAG does not match TypeSafeClient::VERSION ($CONST)."
+            exit 1
+          fi
+          if [ "$TAG" != "$CHANGELOG" ]; then
+            echo "::error::Tag v$TAG does not match the top CHANGELOG entry ($CHANGELOG)."
+            exit 1
+          fi
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
