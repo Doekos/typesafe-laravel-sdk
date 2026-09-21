@@ -1,7 +1,14 @@
 {
     "name": "doekos/typesafe-laravel-sdk",
     "description": "Laravel-native SDK for the TypeSafe (Jev / System One) API.",
-    "keywords": ["laravel", "typesafe", "jev", "system-one", "sdk", "ai"],
+    "keywords": [
+        "laravel",
+        "typesafe",
+        "jev",
+        "system-one",
+        "sdk",
+        "ai"
+    ],
     "license": "MIT",
     "type": "library",
     "require": {
@@ -30,7 +37,8 @@
     "scripts": {
         "test": "phpunit",
         "analyse": "phpstan analyse",
-        "format": "pint"
+        "format": "pint",
+        "upstream": "php bin/upstream-check.php"
     },
     "config": {
         "sort-packages": true

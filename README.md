@@ -266,6 +266,9 @@ and **JavaScript SDK 0.6.0** (the two share one release line; Python was ahead a
   always at or above the release it mirrors.
 - Every changelog entry names the upstream versions it mirrors, so the claim can be checked per release.
 
+Run `composer upstream` to check this package against the latest official releases; a weekly workflow
+does the same and opens an issue when they move ahead.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
